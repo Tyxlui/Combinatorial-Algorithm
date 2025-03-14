@@ -1,135 +1,94 @@
-#include <algorithm>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
-#include <chrono>
-#include <ctime>
+#include <algorithm>
 
-const int numberTop = 10;
-const int maxWeight = 10;
+const size_t MAX_WEIGHT = 100;
 
-long double factorial(long double num)
+struct Item
 {
-  size_t f = 1;
-  for (size_t i = 1; i <= num; i++)
-  {
-    f = f * i;
-  }
+  std::string name;
+  size_t number;
+  size_t weight;
+  size_t value;
+};
 
-  return f;
-}
-
-void timerProg(double dur, long double factor)
-{
-  std::cout << dur * (factorial(factor) / factorial(numberTop)) << " секунд" << std::endl;
-  std::cout << dur * (factorial(factor) / factorial(numberTop)) / 60 << " минут" << std::endl;
-  std::cout << dur * (factorial(factor) / factorial(numberTop)) / 60 / 60 << " часов" << std::endl;
-  std::cout << dur * (factorial(factor) / factorial(numberTop)) / 60 / 60 / 24 << " дней" << std::endl;
-  std::cout << dur * (factorial(factor) / factorial(numberTop)) / 60 / 60 / 24 / 365 << " лет" << std::endl;
-}
+using Backpack = std::vector<Item>;
 
 int main()
 {
+  Backpack backpack;
 
-  srand(time(0));
+  std::string fileName;
+  std::cin >> fileName;
 
-  auto start = std::chrono::high_resolution_clock::now();
+  std::ifstream file(fileName);
 
-  size_t sumMatrix = 0;
-
-  size_t matrix[numberTop][numberTop];
-
-  for (size_t j = 0; j < numberTop; j++)
+  if (!file.is_open())
   {
-    for (size_t i = 0; i < numberTop; i++)
-    {
-      if (i == j)
-      {
-        matrix[i][j] = 0;
-      }
-      else
-      {
-        matrix[i][j] = rand() % (0 - maxWeight);
-        sumMatrix += matrix[i][j];
-      }
-    }
+    std::cout << "Неправильное имя файла" << std::endl;
+    return 1;
   }
 
-  std::string space = " ";
+  std::string line;
+  size_t numberItems = 0;
 
-  for (size_t j = 0; j < numberTop; j++)
+  while (std::getline(file, line) && !line.empty())
   {
-    for (size_t i = 0; i < numberTop; i++)
-    {
-      std::cout << matrix[i][j] << " ";
-    }
-    std::cout << std::endl;
+    std::stringstream ss(line);
+    Item item;
+
+    ss >> item.name >> item.weight >> item.value;
+    item.number = backpack.size() + 1;
+
+    backpack.push_back(item);
+    numberItems++;
   }
 
   std::vector<size_t> permutations = {};
 
-  std::vector<size_t> copies = {};
-
-  for (size_t i = 0; i < numberTop; i++)
+  for (size_t i = 0; i < numberItems; i++)
   {
     permutations.push_back(i + 1);
   }
 
-  for (size_t j = 0; j < numberTop; j++)
-  {
-    for (size_t i = 0; i < numberTop; i++)
-    {
-      if (matrix[i][j] == 0)
-      {
-        matrix[i][j] == sumMatrix;
-      }
-    }
-  }
-
-  size_t amount = __INT_MAX__;
+  size_t value = 0;
+  Backpack copies;
 
   do
   {
-    size_t am = 0;
+    size_t amountWeight = 0;
+    size_t amountValue = 0;
+    size_t amountOfItems = 0;
 
-    for (size_t i = 0; i < numberTop - 1; i++)
+    for (size_t i = 0; i < numberItems - 1 && amountWeight < (MAX_WEIGHT - backpack[permutations[i] - 1].weight); i++)
     {
-      am += matrix[permutations[i] - 1][permutations[i + 1] - 1];
+      amountWeight += backpack[permutations[i] - 1].weight;
+      amountValue += backpack[permutations[i] - 1].value;
+      amountOfItems++;
     }
 
-    am += matrix[permutations[numberTop - 1] - 1][permutations[0] - 1];
-
-    if (am < amount)
+    if (amountValue > value)
     {
       copies.clear();
-      for (size_t i = 0; i < numberTop; i++)
+      for (size_t i = 0; i < amountOfItems; i++)
       {
-        copies.push_back(permutations[i]);
+        copies.push_back(backpack[permutations[i] - 1]);
       }
     }
 
-    amount = std::min(amount, am);
+    value = std::max(value, amountValue);
   } while (std::next_permutation(permutations.begin(), permutations.end()));
 
-  std::cout << std::endl;
+  std::cout << "Максимальная ценность: " << value << std::endl;
 
-  std::cout << "Последовательность вершин для гамильтонова цикла: ";
+  std::cout << "Содержимое рюкзака: " << std::endl;
 
-  for (size_t i = 0; i < numberTop; i++)
+  for (size_t i = 0; i < copies.size(); i++)
   {
-    std::cout << copies[i] << " ";
+    std::cout << "|" << copies[i].name << "|" << std::endl;
   }
-
-  std::cout << std::endl;
-
-  std::cout << "Наименьший вес: " << amount << std::endl;
-
-  auto end = std::chrono::high_resolution_clock::now();
-
-  auto dur = end - start;
-
-  std::cout << "Время: " << std::chrono::duration<double>(dur).count() << " секунд" << std::endl;
-
-  timerProg(std::chrono::duration<double>(dur).count(), 50);
 
   return 0;
 }
